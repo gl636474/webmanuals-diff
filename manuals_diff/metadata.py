@@ -5,14 +5,25 @@ Created on 18 Dec 2019
 '''
 
 class WebManualsManualMetadata:
+    """Represents meta data about a particular Web Manuals manual. The following
+    properties can will provide infrmation:
+    
+    revision_name - human readable version information as a string
+    revision_id - a computer readable revision number as a number
+    id - the ID number of the manual.
+    """
     
     class WebManualsChapter:
+        """Represents a chapter of teh manual - with a name and an ordered list
+        of pages."""
         def __init__(self, name: str = ""):
             self.name = name
             self.pages = list()
     
     def __init__(self, metadata):
-
+        """Creates a new metadata object from the provided JSON. Once created,
+        the revision_name, revision_id and id properties can be used to retrieve
+        the version information and manual id."""
         try:
             self.revision_name = metadata["revisionName"]
             self.revision_id = metadata["revisionId"]
@@ -35,6 +46,9 @@ class WebManualsManualMetadata:
                 new_chapter.pages.append(page["id"])
     
     def add_chapter(self, name: str = ""):
+        """Adds another (optionally named) chapter to the end of the current
+        list of chapters. Pages can then be added to the chapter via the
+        add_page() method."""
         new_chapter = WebManualsManualMetadata.WebManualsChapter(name)
         self.chapters.append(new_chapter)
         return new_chapter

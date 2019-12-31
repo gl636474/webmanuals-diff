@@ -1,8 +1,16 @@
 #!python3
 
 from pathlib import Path
-from manuals_diff import WebManualsDownloader
+from manuals_diff import WebManualsServer
+from manuals_diff import WebManualsPageParser
 
-wmd = WebManualsDownloader()
-wmd.download_manual(5563, 'gladd', 'gladd', Path("/Users/gareth/Documents/Programming/eclipse-workspace-python/Webmanuals Diff"))
+dest_dir = Path("/Users/gareth/Documents/Programming/eclipse-workspace-python/Webmanuals Diff")
 
+server = WebManualsServer('gladd', 'gladd')
+downloader = server.get_manual(5563)
+downloader.download(dest_dir)
+
+file = dest_dir / "pages" / "page00000006"
+
+p = WebManualsPageParser(file)
+print(p.revision())
