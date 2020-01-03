@@ -4,6 +4,7 @@ Created on 18 Dec 2019
 @author: gareth
 '''
 
+import html2text
 import pyquery
 import re
 from pathlib import Path
@@ -69,3 +70,26 @@ class WebManualsPageParser:
             return self._strip_whitespace(text)
         else:
             return None
+        
+    def raw_content(self):
+        """Returns a string containing an HTML snippet - the part we are
+        actually interested in - the bit that contains the manual content."""
+        
+        return self._d("div.compare-result-container").html()
+    
+    def sanitised_content(self):
+        """Returns the raw content with the <span>s removed which gave hints to
+        the previous content."""
+        
+        nodes = self._d("div.compare-result-container")
+        # nodes.remove(...)
+        return nodes.html()
+    
+    def wiki_markup(self):
+        """Returns a string containing wiki markup (in markdown format) of the
+        manual content"""
+        parser = html2text.HTML2Text()
+        parser.ignore_links = False
+        wiki_text = parser.handle(self.sanitised_content())
+        return wiki_text
+        
