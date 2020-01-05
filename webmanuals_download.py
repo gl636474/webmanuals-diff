@@ -15,11 +15,12 @@ dest_dir = Path("/Users/gareth/Documents/Programming/eclipse-workspace-python/We
 #downloader = server.get_manual(manual_id)
 #downloader.download(dest_dir)
 
-file = dest_dir / "pages" / "page00000006"
+file = dest_dir / "pages" / "page00000015"
 
 p = WebManualsPageParser(file)
 print(p.revision())
 print(p.title())
 print(p.date())
 print(p.page_number())
+#print(p.sanitised_content())
 print(p.wiki_markup())

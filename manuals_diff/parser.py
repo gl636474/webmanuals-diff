@@ -11,8 +11,9 @@ from pathlib import Path
 
 class WebManualsPageParser:
     """Reads in a downloaded Web Manuals manual page and parses it for revision
-    information and content. The content is converted from HTML snippets to
-    Wiki Markdown format.
+    information and content. The content is converted from HTML snippet to
+    Wiki Markdown format.Note that none of these methods cache their return
+    values so repeated calls will cause repeated processing.
     """
     def __init__(self, filename: Path):
         """Reads in the specified file ready for information to be accessed via
@@ -81,15 +82,49 @@ class WebManualsPageParser:
         """Returns the raw content with the <span>s removed which gave hints to
         the previous content."""
         
-        nodes = self._d("div.compare-result-container")
-        # nodes.remove(...)
-        return nodes.html()
+        # content = self._d("div.controlledSectionView")
+        content = self._d("div.compare-result-container")
+        
+        previous_value_spans = content("span.diff-html-removed")
+        previous_value_spans.remove()
+        
+        previous_value_spans = content("span.wm-diff-delete-marker")
+        previous_value_spans.remove()
+        
+        # Find empty links - Webmanuals deletes the text content but leaves the
+        # outer <a href>!
+        def is_empty(_, this):
+            """Returns True if the given PyQuery element has no text inside it,
+            i.e. is nothing or is just whitespace."""
+            content = pyquery.PyQuery(this).text()
+            return content == None or content.strip() == ''
+        
+        empty_a_elements = content("a").filter(is_empty)
+        empty_a_elements.remove()
+        
+        # Wrap tables in a <p> so when converted to Markdown consecutive tables
+        # aren't concatonated
+        tables = content("table")
+        tables.wrap("<p></p>")
+        
+        # Remove CSS float-clearing DIVs
+        style_divs = content("div[style='clear: both; line-height: 1px;']")
+        style_divs.remove()
+        
+        return content.html()
     
     def wiki_markup(self):
         """Returns a string containing wiki markup (in markdown format) of the
         manual content"""
         parser = html2text.HTML2Text()
         parser.ignore_links = False
+        parser.body_width = 2000
+        parser.wrap_links = False
+        parser.protect_links = True
+        parser.wrap_list_items = False
+        parser.unicode_snob = True
+        parser.pad_tables = False
         wiki_text = parser.handle(self.sanitised_content())
+        wiki_text.replace(r'Â ', '')
         return wiki_text
         
