@@ -11,10 +11,6 @@ manual_id = FSI_MANUAL_ID
 
 dest_dir = Path("/Users/gareth/Documents/Programming/eclipse-workspace-python/Webmanuals Diff")
 
-#server = WebManualsServer('gladd', 'gladd')
-#downloader = server.get_manual(manual_id)
-#downloader.download(dest_dir)
-
 file = dest_dir / "pages" / "page00000015"
 
 p = WebManualsPageParser(file)
