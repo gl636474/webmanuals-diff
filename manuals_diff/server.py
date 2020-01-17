@@ -6,6 +6,7 @@ Created on 18 Dec 2019
 from .downloader import WebManualsManualDownloader
 
 import requests
+from pathlib import Path
 
 class WebManualsServer:
     """Represents a WebManuals site from which manuals can be downloaded. Call
@@ -89,23 +90,22 @@ class WebManualsServer:
             self._session.close()
             self._session = None
 
-    def get_manual(self, manual_id: int):
+    def get_manual(self, manual_id: int, destination_dir: Path):
         """Returns a WebManualsManualDownloader object which will download the
         specified manual."""
         
         if self._session:
-            # Doing things single-threaded
-            return WebManualsManualDownloader(self._session, 
-                                              manual_id, 
-                                              self.metadata_url,
-                                              self.page_url)
+            # Doing things single-threaded - reuse existing session
+            session = self._session
         else:
             # Doing things asynchronously - create session per downloader/thread
             session = self._create_session()
-            return WebManualsManualDownloader(session, 
-                                              manual_id, 
-                                              self.metadata_url,
-                                              self.page_url)
+            
+        return WebManualsManualDownloader(session, 
+                                          manual_id, 
+                                          self.metadata_url,
+                                          self.page_url,
+                                          destination_dir)
 
 
 

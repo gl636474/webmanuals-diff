@@ -3,6 +3,8 @@ Created on 18 Dec 2019
 
 @author: gareth
 '''
+import json
+from pathlib import Path
 
 class WebManualsManualMetadata:
     """Represents meta data about a particular Web Manuals manual. The following
@@ -20,31 +22,86 @@ class WebManualsManualMetadata:
             self.name = name
             self.pages = list()
     
-    def __init__(self, metadata):
-        """Creates a new metadata object from the provided JSON. Once created,
-        the revision_name, revision_id and id properties can be used to retrieve
-        the version information and manual id."""
+    _save_file_encoding = "UTF-8"
+    
+    _metadata_filename = "metadata.json"
+    
+    def __init__(self, cache_dir: Path):
+        """Creates a new metadata object which will parse Webmanuals JSON
+        manual metadata. Parsed metadata will be cached in and read from the
+        supplied directory.
+        
+        One (or both) of load_from_cache() and parse_json() should be called to
+        instantiate the instance properties."""
+        
+        cache_dir.mkdir(parents=True, exist_ok=True)
+        self._cache_filename = cache_dir / WebManualsManualMetadata._metadata_filename
+    
+    def clean(self):
+        """Sets all properties to None."""
+        self.id = None
+        self.name = None
+        self.revision_id = None
+        self.revision_name = None
+        self.chapters = None
+    
+    def load_from_cache(self):
+        """Attempts to load metadata from the saved metadata file in the
+        cache_dir directory supplied in the constructor. Returns True if cached
+        metadata was successfully loaded or False otherwise (if file was not
+        present or was invalid)."""
+    
+        if self._cache_filename.is_file():
+            try:
+                # Read from file then parse
+                with self._cache_filename.open(encoding=WebManualsManualMetadata._save_file_encoding) as stream:
+                    file_contents = stream.read()
+                    
+                loaded_metadata = json.loads(file_contents)
+                self.parse_json(loaded_metadata, cache_it=False)
+                return True
+            
+            except:
+                self.clean()
+                return False
+        else:
+            return False
+
+    def parse_json(self, json_dict: dict, cache_it: bool = True):
+        """Parse the supplied JSON and sets up the instance properties.
+        Optionally saves the parsed JSON in a file in the cache_dir supplied in
+        the constructor to be read by load_from_cache()."""
+        
         try:
-            self.revision_name = metadata["revisionName"]
-            self.revision_id = metadata["revisionId"]
-            self.id = metadata["manualId"]
+            self.revision_name = json_dict["revisionName"]
+            self.revision_id = json_dict["revisionId"]
+            self.id = json_dict["manualId"]
         except KeyError as key_error:
             raise ValueError("Metadata does not contain required key: {}"
                              .format(str(key_error)))
             
         try:
-            self.name = metadata["chapters"][0]["pages"][0]["name"]
+            self.name = json_dict["chapters"][0]["pages"][0]["name"]
         except:
             self.name = "Unknown"
 
         # list of WebManualsChapter
         self.chapters = list()
         
-        for chapter in metadata["chapters"]:
-            new_chapter = self.add_chapter(chapter["name"])
-            for page in chapter["pages"]:
-                new_chapter.pages.append(page["id"])
-    
+        try:
+            for chapter in json_dict["chapters"]:
+                new_chapter = self.add_chapter(chapter["name"])
+                for page in chapter["pages"]:
+                    new_chapter.pages.append(page["id"])
+        except KeyError as key_error:
+            raise ValueError("Metadata does not contain required key: {}"
+                             .format(str(key_error)))
+        
+        if cache_it:
+            metadata_as_string = json.dumps(json_dict, indent=2)
+            with self._cache_filename.open(mode='w', encoding=WebManualsManualMetadata._save_file_encoding) as stream:
+                print(metadata_as_string, file=stream)
+
     def add_chapter(self, name: str = ""):
         """Adds another (optionally named) chapter to the end of the current
         list of chapters. Pages can then be added to the chapter via the
