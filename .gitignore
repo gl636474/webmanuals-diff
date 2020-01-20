@@ -104,3 +104,6 @@ venv.bak/
 .mypy_cache/
 /.project
 /.pydevproject
+/12657/
+/5563/
+/credentials.json

@@ -71,7 +71,9 @@ class WebManualsManualDownloader:
         directory specified in the constructor. The directory will be created if
         it does not already exist. Pages will only be downloaded if there is not
         already a file for that page present in the destination directory 
-        supplied in the constructor."""
+        supplied in the constructor.
+        
+        Returns the directory containing the downloaded metadata and pages."""
         
         self.destination_dir.mkdir(parents=True, exist_ok=True)
         
@@ -85,6 +87,8 @@ class WebManualsManualDownloader:
                     self._write_to_file(text, dest_file)
                 
                 page_number += 1
+        
+        return self.destination_dir
 
     def _write_to_file(self, text: str, file_path: Path):
         """Writes the specified text string to a file at the specified path. Any

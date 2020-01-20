@@ -7,19 +7,17 @@ from manuals_diff import WebManualsPageParser
 OMA_MANUAL_ID = 5563
 FSI_MANUAL_ID = 12657
 
-username = input("Username: ")
-password = input("Password: ")
-server = WebManualsServer(username, password)
-
 dest_dir = Path("/Users/gareth/Documents/Programming/eclipse-workspace-python/Webmanuals Diff")
 
-oma_dir = dest_dir / "oma"
-oma_downloader = server.get_manual(OMA_MANUAL_ID, oma_dir)
-oma_downloader.download()
+username = input("Username: ")
+password = input("Password: ")
+server = WebManualsServer(username, password, cache_dir=dest_dir)
 
-fsi_dir = dest_dir / "fsi"
-fsi_downloader = server.get_manual(FSI_MANUAL_ID, fsi_dir)
-fsi_downloader.download()
+oma_downloader = server.get_manual(OMA_MANUAL_ID)
+oma_dir = oma_downloader.download()
+
+fsi_downloader = server.get_manual(FSI_MANUAL_ID)
+fsi_dir = fsi_downloader.download()
 
 
 
