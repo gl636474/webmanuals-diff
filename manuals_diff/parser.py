@@ -78,7 +78,7 @@ class WebManualsPageParser:
         
         return self._d("div.compare-result-container").html()
     
-    def sanitised_content(self):
+    def sanitised_content(self, strip_non_ascii: bool = True):
         """Returns the raw content with the <span>s removed which gave hints to
         the previous content."""
         
@@ -111,7 +111,13 @@ class WebManualsPageParser:
         style_divs = content("div[style='clear: both; line-height: 1px;']")
         style_divs.remove()
         
-        return content.html()
+        html_snippet = content.html()
+        
+        if strip_non_ascii:
+            ascii_bytes = html_snippet.encode('ascii', errors='ignore')
+            html_snippet = ascii_bytes.decode()
+            
+        return html_snippet
     
     def wiki_markup(self):
         """Returns a string containing wiki markup (in markdown format) of the
@@ -125,6 +131,5 @@ class WebManualsPageParser:
         parser.unicode_snob = True
         parser.pad_tables = False
         wiki_text = parser.handle(self.sanitised_content())
-        wiki_text.replace(r'Â ', '')
         return wiki_text
         
