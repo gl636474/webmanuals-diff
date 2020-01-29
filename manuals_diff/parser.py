@@ -8,7 +8,6 @@ import html2text
 import pyquery
 import re
 from pathlib import Path
-from _curses import beep
 
 class WebManualsPageParser:
     """Reads in a downloaded Web Manuals manual page and parses it for revision
@@ -161,9 +160,6 @@ class WebManualsPageParser:
         content = '<span id="page_id_{}" />\n'.format(self.page_id)
         content += self.wiki_markup()
         
-        # TODO: does not capture links
-        # TODO: extract just page ID from link
-        # TODO: ensure we only replace links to current document ID
         content = re.sub(self._internal_link_regex,
                          r"[\1](#page_id_\2)",
                          content)
