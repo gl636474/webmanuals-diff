@@ -66,6 +66,12 @@ class WebManualsManualDownloader:
         """The ID of this manual, e.g. 5536."""
         return self.manual_metadata.id
         
+    def get_page_file(self, page_number: int = 0):
+        """Returns a Path object which gives the location of the file containing
+        the downloaded content of the specified page. I.e. get_page_file(0)
+        returns the Pathg to the first page of the manual."""
+        return self.destination_dir / "page{:08d}".format(page_number)
+        
     def download(self):
         """Actually download the pages of this manual into the destination
         directory specified in the constructor. The directory will be created if
@@ -80,7 +86,7 @@ class WebManualsManualDownloader:
         page_number = 0
         for chapter in self.manual_metadata.chapters:
             for page_id in chapter.pages:
-                dest_file = self.destination_dir / "page{:08d}".format(page_number)
+                dest_file = self.get_page_file(page_number)
                 
                 if not dest_file.is_file():
                     text = self._get_page_snippet(page_id)
