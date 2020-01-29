@@ -19,8 +19,8 @@ class WebManualsServer:
     _credentials_file_encoding = "UTF-8"
 
     def __init__(self,
-                username: str,
-                password: str,
+                username: str = None,
+                password: str = None,
                 protocol: str = 'https',
                 domain: str = 'babcock.webmanuals.aero',
                 login_url_path: str = '/tibet/template/json%2CLoginUser.json',
@@ -28,7 +28,8 @@ class WebManualsServer:
                 page_url_path: str = '/tibet/template/Index.vm',
                 site_id: int = 1140,
                 thread_safe: bool = False,
-                cache_dir: Path = Path("~/.manuals_diff")):
+                cache_dir: Path = Path("~/.manuals_diff"),
+                offline: bool = False):
         """Logs into a WebManuals server ready to download manuals via the
         get_manual() method. The protocol ('http' or 'https'), domain, URLs and
         site ID all default to the Babcock Web Manuals site and can be omitted.
@@ -40,7 +41,12 @@ class WebManualsServer:
         so only one login will be performed. If thread_safe is True then each
         downloader will have their own session. This is provided because there
         is some discrepency in the documentation as to whether requests.Session
-        is thread safe."""
+        is thread safe.
+        
+        If offline is True then the server will not create sessions for the
+        manual downloaders. Use this for totally offline operations. Any attempt
+        by the downloaders to use the session will result in an AttributeError.
+        If offline is True then thread_safe is ignored."""
     
         self.base_url = protocol + '://' + domain
         self.login_url = self.base_url + login_url_path
@@ -52,18 +58,23 @@ class WebManualsServer:
         self.site_id = site_id
         self._chache_dir = cache_dir
         
+        self.offline = offline
         self._set_up_username_password()
         
-        if thread_safe:
-            # Just check we can log in. Sesions will be created one for each
-            # downloader
-            session = self._create_session()
-            session.close()
-            self._session = None
+        if not offline:
+            if thread_safe:
+                # Just check we can log in. Sesions will be created one for each
+                # downloader
+                session = self._create_session()
+                session.close()
+                self._session = None
+            else:
+                # Create and save the session which will be shared by every
+                # downloader. This way we only log in once.
+                self._session = self._create_session()
         else:
-            # Create and save the session which will be shared by every
-            # downloader. This way we only log in once.
-            self._session = self._create_session()
+            # Offline mode - do nothing
+            self._session = None
 
     def _set_up_username_password(self):
         """If username and/or password are None, attempts to read the missing
@@ -106,27 +117,31 @@ class WebManualsServer:
         """Creates a requests module Session object which has already logged
         into WebManuals site."""
 
-        session = requests.Session()
-        session.headers.update({
-            "Accept": "application/json, text/plain, */*",
-            "Accept-Encoding": "gzip, deflate, br",
-            "Accept-Language": "en-GB,en;q=0.5"
-            })
-
-        homepage_response = session.get(self.base_url)
-        homepage_response.raise_for_status() # no-op if 2xx response code
-        
-        # Log in
-        login_payload = {
-            "acceptedTou": "true",
-            "action": "LoginUser",
-            "password": self.password,
-            "siteId": str(self.site_id),
-            "username": self.username}
-        login_response = session.post(self.login_url, data=login_payload)
-        login_response.raise_for_status() # no-op if 2xx response code
-
-        return session
+        if not self.offline:
+            session = requests.Session()
+            session.headers.update({
+                "Accept": "application/json, text/plain, */*",
+                "Accept-Encoding": "gzip, deflate, br",
+                "Accept-Language": "en-GB,en;q=0.5"
+                })
+    
+            homepage_response = session.get(self.base_url)
+            homepage_response.raise_for_status() # no-op if 2xx response code
+            
+            # Log in
+            login_payload = {
+                "acceptedTou": "true",
+                "action": "LoginUser",
+                "password": self.password,
+                "siteId": str(self.site_id),
+                "username": self.username}
+            login_response = session.post(self.login_url, data=login_payload)
+            login_response.raise_for_status() # no-op if 2xx response code
+    
+            return session
+        else:
+            #Offline mode
+            return None
 
     def close(self):
         """Closes any open session. Further calls to get_manual() will result in
