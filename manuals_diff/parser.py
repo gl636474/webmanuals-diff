@@ -8,6 +8,7 @@ import html2text
 import pyquery
 import re
 from pathlib import Path
+from _curses import beep
 
 class WebManualsPageParser:
     """Reads in a downloaded Web Manuals manual page and parses it for revision
@@ -15,11 +16,22 @@ class WebManualsPageParser:
     Wiki Markdown format.Note that none of these methods cache their return
     values so repeated calls will cause repeated processing.
     """
-    def __init__(self, filename: Path):
+    
+    def __init__(self, filename: Path, page_id: int, page_index: int, manual_id: int):
         """Reads in the specified file ready for information to be accessed via
         the other methods of this class."""
         self._d = pyquery.PyQuery(filename=filename)
-    
+        
+        self.page_id = page_id
+        self.page_index = page_index
+        self.manual_id = manual_id
+        
+        # Match [LabelText](</reader/#/5678/p/1234>)
+        # Capture label and page id (1234 above) where 5678 is the manual ID
+        # NB REGEX special characters need escaping: <>[]()#
+        # NB Using raw string so there is no standard escapes (e.g. \n)
+        self._internal_link_regex = re.compile(r'\[([^]]+)\]\(</reader/\#/{}/p/([^>]+)>\)'.format(self.manual_id))
+
     def _strip_whitespace(self, text: str):
         """Removes all whitespace from start and end of text and replaces all
         sequences of whitespace in the middle of the text with a single 'normal'
@@ -79,11 +91,18 @@ class WebManualsPageParser:
         return self._d("div.compare-result-container").html()
     
     def sanitised_content(self, strip_non_ascii: bool = True):
-        """Returns the raw content with the <span>s removed which gave hints to
-        the previous content."""
+        """Returns the raw HTML content with some modifications to allow for
+        easy parsing into wiki markup. Modifications include:
+          * removing header/footer
+          * removing <span>s which hint to changes from previous version
+          * removing empty(!!) links
+          * removing empty formatting <div>s (e.g. which just clear float)
+          * separating consecutive tables so they aren't concatonated
+          * removing non-ascii characters"""
         
         # content = self._d("div.controlledSectionView")
-        content = self._d("div.compare-result-container")
+        # content = self._d("div.compare-result-container")
+        content = self._d("div.section")
         
         previous_value_spans = content("span.diff-html-removed")
         previous_value_spans.remove()
@@ -132,4 +151,21 @@ class WebManualsPageParser:
         parser.pad_tables = False
         wiki_text = parser.handle(self.sanitised_content())
         return wiki_text
+    
+    def sanitised_wiki_markup(self):
+        """Returns the page of wiki markup with modifications ready to be
+        concatonated with the other pages of the manual. Modifications include:
+          * adding an anchor at the top of each page
+          * replacing links to pages in the same document with relative links.
+          """
+        content = '<span id="page_id_{}" />\n'.format(self.page_id)
+        content += self.wiki_markup()
         
+        # TODO: does not capture links
+        # TODO: extract just page ID from link
+        # TODO: ensure we only replace links to current document ID
+        content = re.sub(self._internal_link_regex,
+                         r"[\1](#page_id_\2)",
+                         content)
+        
+        return content
