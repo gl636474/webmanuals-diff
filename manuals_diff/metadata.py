@@ -36,6 +36,7 @@ class WebManualsManualMetadata:
         
         cache_dir.mkdir(parents=True, exist_ok=True)
         self._cache_filename = cache_dir / WebManualsManualMetadata._metadata_filename
+        self.clean()
     
     def clean(self):
         """Sets all properties to None."""
@@ -44,6 +45,8 @@ class WebManualsManualMetadata:
         self.revision_id = None
         self.revision_name = None
         self.chapters = None
+        
+        self._pages = None
     
     def load_from_cache(self):
         """Attempts to load metadata from the saved metadata file in the
@@ -108,6 +111,10 @@ class WebManualsManualMetadata:
         add_page() method."""
         new_chapter = WebManualsManualMetadata.WebManualsChapter(name)
         self.chapters.append(new_chapter)
+        
+        # Discard old page cache 
+        self._pages = None
+            
         return new_chapter
     
     def get_last_chapter(self):
@@ -129,6 +136,8 @@ class WebManualsManualMetadata:
         last_chapter = self.get_last_chapter()
         if last_chapter >= 0 and chapter <= last_chapter:
             self.chapters[chapter].pages.append(page_id)
+            # Discard old page cache 
+            self._pages = None
         else:
             raise ValueError("Manual '{}' has no chapter {} (last chapter: {})"
                              .format(self.name, chapter, last_chapter))
@@ -138,18 +147,35 @@ class WebManualsManualMetadata:
         entire manual if chapter_number is -1 or not supplied."""
         
         if chapter_number < 0:
-            pages = list()
-            for chapter in self.chapters:
-                pages.extend(chapter.pages)
-            return pages
+            return self.get_all_pages()
         
         else:
             # NB: chapter numbers are 0-based
             last_chapter = self.get_last_chapter()
-            if chapter <= last_chapter:
-                return self.chapters[chapter].pages
+            if chapter_number <= last_chapter:
+                return self.chapters[chapter_number].pages
             else:
                 raise ValueError("Manual '{}' has no chapter {} (last chapter: {})"
-                                 .format(self.name, chapter, last_chapter))
-                    
-            
+                                 .format(self.name, chapter_number, last_chapter))
+    def get_all_pages(self):
+        """Gets the list of page IDs for the entire manual. This is cached on
+        first access. The cache will be nulled if add_page() or add_chapter() is
+        called."""
+        
+        if self._pages == None:
+            self._pages = list()
+            for chapter in self.chapters:
+                self._pages.extend(chapter.pages)
+        
+        return self._pages
+                        
+    def get_page_id(self, page_number: int):
+        """Returns the ID of the specified page number. Page numbers are
+        zero-indexed."""
+        return self.get_all_pages()[page_number]
+    
+    def get_number_pages(self):
+        """Returns the number of pages in the manual."""
+        return len(self.get_all_pages())
+
+        
