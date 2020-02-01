@@ -109,16 +109,21 @@ class WebManualsPageParser:
         previous_value_spans = content("span.wm-diff-delete-marker")
         previous_value_spans.remove()
         
-        # Find empty links - Webmanuals deletes the text content but leaves the
-        # outer <a href>!
         def is_empty(_, this):
             """Returns True if the given PyQuery element has no text inside it,
             i.e. is nothing or is just whitespace."""
             content = pyquery.PyQuery(this).text()
             return content == None or content.strip() == ''
         
+        # Find empty links - Webmanuals deletes the text content but leaves the
+        # outer <a href>!
         empty_a_elements = content("a").filter(is_empty)
         empty_a_elements.remove()
+        
+        # Find put content in empty table cell elements - they don't render
+        # properly in MediaWiki
+        empty_td_elements = content("td").filter(is_empty)
+        empty_td_elements.text(".")
         
         # Wrap tables in a <p> so when converted to Markdown consecutive tables
         # aren't concatonated
@@ -157,7 +162,7 @@ class WebManualsPageParser:
           * adding an anchor at the top of each page
           * replacing links to pages in the same document with relative links.
           """
-        content = '<span id="page_id_{}" />\n'.format(self.page_id)
+        content = '<span id="page_id_{}" />\n\n'.format(self.page_id)
         content += self.wiki_markup()
         
         content = re.sub(self._internal_link_regex,
